@@ -14,7 +14,7 @@ const { notFound, errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
 
-
+// CORS Configuration
 const allowedOrigins = [
   "http://localhost:5173",
   "https://medicaresaas-hospital-management.vercel.app",
@@ -22,49 +22,53 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://medicaresaas-hospital-management.vercel.app");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-
-  next();
-});
-
-app.options("/api/auth/register", cors());
-app.options("*", cors());
- 
+// Middleware
 app.use(express.json());
-app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+app.use(
+  morgan(process.env.NODE_ENV === "production" ? "combined" : "dev")
+);
 
+// Test Routes
 app.get("/", (req, res) => {
-  res.json({ success: true, message: "MediCare SaaS API is running" });
+  res.json({
+    success: true,
+    message: "MediCare SaaS API is running",
+  });
 });
-app.get("/api/health", (req, res) => res.json({ success: true, status: "ok" }));
 
-// Routes
+app.get("/api/health", (req, res) => {
+  res.json({
+    success: true,
+    status: "ok",
+  });
+});
+
+// API Routes
 app.use("/api/auth", authRoutes);
-app.use("/api", appointmentRoutes); // exposes /api/doctors and /api/appointments/*
+app.use("/api", appointmentRoutes);
 app.use("/api/patients", patientRoutes);
-app.use("/api/doctors", doctorRoutes); // doctor-specific dashboard/notes endpoints
+app.use("/api/doctors", doctorRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reception", receptionRoutes);
 
+// Error Handling
 app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`MediCare SaaS API listening on port ${PORT}`);
 });
